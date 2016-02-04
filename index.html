@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Canvas Office</title>
+		
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">		
+		
+		<link href='https://fonts.googleapis.com/css?family=Raleway:100' rel='stylesheet' type='text/css'>
+		<link href="./css/main.css" type="text/css" rel="stylesheet"/>
+		
+		<script src="./lib/three.js"></script>
+		<script src="./lib/renderer.js"></script>
+	</head>
+	
+	
+	<body>
+		<!--Loading Screen-->
+		<div id="loading_screen"><div id="loading">
+			<canvas id="preload"></canvas>
+			<script>
+				function degToRad(degree) {
+					var factor = Math.PI/180;
+					return degree*factor;
+				}		
+				
+				var canvas = document.getElementById("preload");
+				var ctx = canvas.getContext('2d');
+				canvas.width = 500;
+				canvas.height = 600;			
+				
+				var al = 0;
+				var cw = 500;
+				var ch = 500;
+				var start = 4.72;
+				var diff;
+				
+				
+				function progressSim(){			
+					diff = ((al / 100) * Math.PI*2*10).toFixed(2);
+					ctx.clearRect(0, 0, 500, 600);
+					
+					//Thin circle
+					ctx.lineWidth = 3;
+					ctx.strokeStyle = "hsla(0,0%,100%, 0.4)";	
+					ctx.lineCap = 'round';			
+					
+					ctx.beginPath();
+					ctx.arc( 
+						cw/2,			// x-Coordinate
+						ch/2,  			// y-Coordinate
+						cw/2-10,		// Radius
+						degToRad(0),	// starting Point
+						degToRad(360)
+					);
+					ctx.stroke();
+					
+					
+										
+					ctx.lineWidth = 6;
+					ctx.fillStyle = "white";
+					ctx.strokeStyle = "white";
+					
+					ctx.beginPath();
+					ctx.arc( 
+						cw/2, 
+						ch/2, 
+						cw/2-10, 
+						start, 
+						diff/10+start, 
+						false
+					);
+					ctx.stroke();
+					
+					ctx.font = "35px Raleway";
+					ctx.textAlign = "center";
+					ctx.fillText("360° Panorama", cw*0.5, ch*0.5+2, cw);
+					ctx.font = "25px Raleway";
+					ctx.fillText(al + "% loaded", cw*.5, 550, cw);
+						
+						
+					if(al > 100){
+						clearTimeout(sim);
+						var load_screen = document.getElementById("loading_screen");
+						document.body.removeChild(loading_screen);
+						
+						//create sky & start animation
+						init();
+						animate();
+					}else{
+						al++;
+					}
+				}
+				
+				var sim = setInterval(progressSim, 50);
+			</script>		
+		</div></div>
+
+
+			
+		<!-- Invisible elements for the skybox later on -->
+		<section>
+			<img src="./images/cube.png" id="myimage"></img>
+			
+			<!-- <video width="1620" height="1080" id="mystream" autoplay muted>
+				<source src="./images/avatar.mp4" type="video/mp4">  
+			</video> -->	
+			
+			<canvas id = "negx">
+				Error: Canvas isn't supported
+			</canvas>
+			<canvas id = "posz">
+				Error: Canvas isn't supported
+			</canvas>
+			<canvas id = "posx">
+				Error: Canvas isn't supported
+			</canvas><br>
+			<canvas id = "negz">
+				Error: Canvas isn't supported
+			</canvas>
+			<canvas id = "posy">
+				Error: Canvas isn't supported
+			</canvas>
+			<canvas id = "negy">
+				Error: Canvas isn't supported
+			</canvas>	
+		</section>
+		
+		
+
+		<script src="./js/DrawCanvas.js"></script>
+		<script src="./js/eventListeners.js"></script>
+		
+		<script>	
+			posxURL = paintPosX();
+			negxURL = paintNegX();
+			
+			poszURL = paintPosZ();
+			negzURL = paintNegZ();
+
+			posyURL = paintPosY();
+			negyURL = paintNegY();
+
+
+
+			var camera, scene, renderer;
+			var geometry, material, mesh;
+			var target = new THREE.Vector3();
+
+			var lon = 90, lat = 0;
+			var phi = 0, theta = 0;
+
+			var touchX, touchY;
+
+
+
+			function init() {
+
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1000 );
+				scene = new THREE.Scene();
+
+				var sides = [
+					{
+						url: posxURL,
+						position: [ -512, 0, 0 ],
+						rotation: [ 0, Math.PI / 2, 0 ]
+					},
+					{
+						url: negxURL,
+						position: [ 512, 0, 0 ],
+						rotation: [ 0, -Math.PI / 2, 0 ]
+					},
+					{
+						url: posyURL,
+						position: [ 0,  512, 0 ],
+						rotation: [ Math.PI / 2, 0, Math.PI ]
+					},
+					{
+						url: negyURL,
+						position: [ 0, -512, 0 ],
+						rotation: [ - Math.PI / 2, 0, Math.PI ]
+					},
+					{
+						url: poszURL,
+						position: [ 0, 0,  512 ],
+						rotation: [ 0, Math.PI, 0 ]
+					},
+					{
+						url: negzURL,
+						position: [ 0, 0, -512 ],
+						rotation: [ 0, 0, 0 ]
+					}
+				];
+
+				for ( var i = 0; i < sides.length; i ++ ) {
+
+					var side = sides[ i ];
+
+					var element = document.createElement( 'img' );
+					element.width = 1028; // 4 pixels extra to close the gap.
+					element.src = side.url;
+					
+					var object = new THREE.CSS3DObject( element );
+					object.position.fromArray( side.position );
+					object.rotation.fromArray( side.rotation );
+					scene.add( object );
+
+				}
+
+				renderer = new THREE.CSS3DRenderer();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );
+
+		
+
+				document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+				document.addEventListener( 'mousewheel', onDocumentMouseWheel, false );
+
+				document.addEventListener( 'touchstart', onDocumentTouchStart, false );
+				document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+		</script>
+	</body>
+</html>
